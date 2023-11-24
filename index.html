@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Honeycomb Designer</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="overlayed-input">
+        <div id="clear-button" class="button">Clear</div>
+        <div id="slant-button" class="button">Slant!</div>
+        <input class="slider" type="range" min="20" max="80" value="60">
+    </div>
+    <div class="container"></div>
+    <script>
+        // get data from url
+        let data;
+        let rotated;
+        let scale;
+        try {
+            parsedFragmentId = JSON.parse(decodeURI(window.location.hash.substr(1)));
+            data = parsedFragmentId.colored_circles;
+            rotated = parsedFragmentId.rotated;
+            scale = parsedFragmentId.scale;
+        } catch (e) {
+            data = [];
+            rotated = false;
+            scale = 6;
+        }
+
+        // set slider
+        let slider = document.querySelector('.slider');
+        slider.value = scale * 10;
+
+        // save url
+        let saveUrl = function() {
+            window.location.hash = encodeURI(JSON.stringify({colored_circles: data, rotated: rotated, scale: scale}));
+        }
+        saveUrl();
+
+        // rotate honeycomb if necessary
+        let container = document.querySelector('.container');
+        let transformHoneycomb = function() {    
+            // this is so the rotation and scale is around the center of the screen
+            container.style.transformOrigin = 'center center';
+            // we scale by 2 minimum so that when rotating there are not cut off borders caused by the "overflow: hidden" property    
+            container.style.transform = `scale(${scale})`;
+            if (rotated) container.style.transform += ' rotate(30deg)';
+        }
+        transformHoneycomb();
+
+        let makeCircles = function(diameter = 8) {
+            // clear container
+            container.innerHTML = '';
+            // each circle is translated up 12%, so its contribution to the total height is diameter - 12% of diameter
+            let numRows = window.innerHeight / (diameter * 0.88);
+            for (let i = 0; i < numRows; i++) {
+                // create row
+                let row = document.createElement('div');
+                row.style.transform += `translateY(${i * -12}%)`;
+                container.appendChild(row);
+                
+                // create circles in row
+                let numCircles = window.innerWidth / diameter;
+                if (i % 2) numCircles -= 1;
+                for (let j = 0; j < numCircles; j++) {
+                    let circle = document.createElement('div');
+                    circle.style.width = `${diameter}px`;
+                    row.appendChild(circle);
+                    if (data.find(d => d.x == j && d.y == i)) circle.style.backgroundColor = 'red';
+                    
+                    // add event listener
+                    circle.addEventListener('click', function() {
+                        // add or remove coords from data and change color
+                        let newColor;
+                        if (this.style.backgroundColor == 'red') {
+                            data = data.filter(d => !( d.x == j && d.y == i ) );
+                            newColor = 'blue';
+                        } else {
+                            data.push({x: j, y: i});
+                            newColor = 'red';
+                        }
+                        this.style.backgroundColor = newColor;
+                        saveUrl();
+                    });
+                }
+            }
+        }
+        makeCircles();
+
+        // button to clear
+        let clearButton = document.querySelector('#clear-button');
+        clearButton.addEventListener('click', function() {
+            data = [];
+            makeCircles();
+            saveUrl();
+        });
+
+        // button to rotate
+        let rotateButton = document.querySelector('#slant-button');
+        rotateButton.addEventListener('click', function() {
+            rotated = !rotated;
+            transformHoneycomb();
+            saveUrl();
+        });
+
+        // slider to change size
+        slider.addEventListener('input', function() {
+            scale = this.value/10;
+            transformHoneycomb();
+            saveUrl();
+        });
+    </script>
+</body>
+</html>
